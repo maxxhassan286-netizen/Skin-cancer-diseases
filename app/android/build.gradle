@@ -1,0 +1,67 @@
+buildscript {
+    ext.kotlin_version = '1.9.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.3.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('com.android.library') || project.plugins.hasPlugin('com.android.application')) {
+            project.android {
+                compileSdkVersion 34
+                buildFeatures {
+                    buildConfig true
+                }
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+    plugins.withId('kotlin-android') {
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = '17'
+            }
+        }
+    }
+    plugins.withId('com.android.library') {
+        android {
+            if (namespace == null) {
+                def manifestFile = new File(projectDir, 'src/main/AndroidManifest.xml')
+                if (!manifestFile.exists()) manifestFile = new File(projectDir, 'main/AndroidManifest.xml')
+                if (manifestFile.exists()) {
+                    def pkg = new groovy.xml.XmlSlurper().parse(manifestFile).@package.text()
+                    if (pkg) namespace = pkg
+                }
+            }
+        }
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
